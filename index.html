@@ -59,6 +59,7 @@
     .preview {
       display: flex;
       align-items: center;
+      justify-content: space-between;
       margin: 10px 0;
       background: #f9fafb;
       padding: 10px;
@@ -69,6 +70,20 @@
       height: auto;
       border-radius: 6px;
       margin-right: 10px;
+    }
+    .file-info {
+      flex-grow: 1;
+    }
+    .remove-btn {
+      background: #ef4444;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 5px 10px;
+      cursor: pointer;
+    }
+    .remove-btn:hover {
+      background: #dc2626;
     }
     progress {
       width: 100%;
@@ -125,28 +140,41 @@
     dropArea.addEventListener("drop", e => {
       e.preventDefault();
       dropArea.classList.remove("dragover");
-      selectedFiles = [...e.dataTransfer.files];
+      selectedFiles = [...selectedFiles, ...e.dataTransfer.files];
       showPreview();
     });
 
     // Загрузка через input
     fileInput.onchange = () => {
-      selectedFiles = [...fileInput.files];
+      selectedFiles = [...selectedFiles, ...fileInput.files];
       showPreview();
     };
 
-    // Показываем превью
+    // Показываем превью с кнопкой удаления
     function showPreview() {
       const output = document.getElementById("output");
       output.innerHTML = "";
-      selectedFiles.forEach(file => {
+      selectedFiles.forEach((file, index) => {
         const url = URL.createObjectURL(file);
         const div = document.createElement("div");
         div.className = "preview";
-        div.innerHTML = `<img src="${url}" alt=""><span>${file.name}</span>`;
+        div.innerHTML = `
+          <div style="display:flex; align-items:center;">
+            <img src="${url}" alt="">
+            <span class="file-info">${file.name}</span>
+          </div>
+          <button class="remove-btn" onclick="removeFile(${index})">❌ Удалить</button>
+        `;
         output.appendChild(div);
       });
     }
+
+    // Удаление файла
+    function removeFile(index) {
+      selectedFiles.splice(index, 1);
+      showPreview();
+    }
+    window.removeFile = removeFile; // делаем глобальной
 
     // Обработка
     document.getElementById("processBtn").onclick = async () => {
@@ -194,12 +222,17 @@
 
         processedFiles.push({ name: file.name.replace(/\.[^/.]+$/, "") + ".webp", blob });
 
-        // превью с кнопкой скачать
+        // превью после обработки
         const url = URL.createObjectURL(blob);
         const div = document.createElement("div");
         div.className = "preview";
-        div.innerHTML = `<img src="${url}" alt=""><span>${processedFiles.at(-1).name}</span>
-          <a href="${url}" download="${processedFiles.at(-1).name}">⬇ Скачать</a>`;
+        div.innerHTML = `
+          <div style="display:flex; align-items:center;">
+            <img src="${url}" alt="">
+            <span class="file-info">${processedFiles.at(-1).name}</span>
+          </div>
+          <a href="${url}" download="${processedFiles.at(-1).name}">⬇ Скачать</a>
+        `;
         output.appendChild(div);
 
         progressBar.value = ((i + 1) / selectedFiles.length) * 100;
