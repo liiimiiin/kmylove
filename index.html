@@ -16,7 +16,7 @@
       padding: 30px;
       border-radius: 16px;
       box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-      width: 500px;
+      width: 600px;
       text-align: center;
     }
     h2 {
@@ -40,13 +40,44 @@
     button:hover {
       background: #4338ca;
     }
+    #dropArea {
+      border: 2px dashed #888;
+      border-radius: 12px;
+      padding: 30px;
+      margin: 20px 0;
+      background: #fafafa;
+      cursor: pointer;
+    }
+    #dropArea.dragover {
+      background: #e0f2fe;
+      border-color: #2563eb;
+    }
     .output {
       margin-top: 20px;
       text-align: left;
     }
+    .preview {
+      display: flex;
+      align-items: center;
+      margin: 10px 0;
+      background: #f9fafb;
+      padding: 10px;
+      border-radius: 8px;
+    }
+    .preview img {
+      width: 80px;
+      height: auto;
+      border-radius: 6px;
+      margin-right: 10px;
+    }
+    progress {
+      width: 100%;
+      margin-top: 15px;
+      height: 18px;
+    }
     a {
-      display: block;
-      margin: 5px 0;
+      display: inline-block;
+      margin-left: 10px;
       color: #2563eb;
       text-decoration: none;
     }
@@ -60,35 +91,85 @@
 <body>
   <div class="container">
     <h2>Редактор изображений</h2>
-    <input type="file" id="fileInput" multiple accept="image/*"><br>
+    
+    <div id="dropArea">Перетащите сюда фото или кликните, чтобы выбрать</div>
+    <input type="file" id="fileInput" multiple accept="image/*" style="display:none">
+    
     <label>Максимальная длинная сторона (px):</label><br>
     <input type="number" id="maxSize" value="1920"><br>
+    
     <button id="processBtn">Обработать</button>
     <button id="downloadAllBtn" style="display:none; background:#10b981;">Скачать все (ZIP)</button>
+    
+    <progress id="progressBar" value="0" max="100" style="display:none;"></progress>
+    
     <div id="output" class="output"></div>
   </div>
 
   <script>
     const processedFiles = [];
+    let selectedFiles = [];
 
-    document.getElementById("processBtn").onclick = async () => {
-      const files = document.getElementById("fileInput").files;
-      const maxSize = parseInt(document.getElementById("maxSize").value);
+    const dropArea = document.getElementById("dropArea");
+    const fileInput = document.getElementById("fileInput");
+
+    // Клик по области = открыть файловый диалог
+    dropArea.onclick = () => fileInput.click();
+
+    // Drag & Drop события
+    dropArea.addEventListener("dragover", e => {
+      e.preventDefault();
+      dropArea.classList.add("dragover");
+    });
+    dropArea.addEventListener("dragleave", () => dropArea.classList.remove("dragover"));
+    dropArea.addEventListener("drop", e => {
+      e.preventDefault();
+      dropArea.classList.remove("dragover");
+      selectedFiles = [...e.dataTransfer.files];
+      showPreview();
+    });
+
+    // Загрузка через input
+    fileInput.onchange = () => {
+      selectedFiles = [...fileInput.files];
+      showPreview();
+    };
+
+    // Показываем превью
+    function showPreview() {
       const output = document.getElementById("output");
       output.innerHTML = "";
-      processedFiles.length = 0; // очищаем массив
+      selectedFiles.forEach(file => {
+        const url = URL.createObjectURL(file);
+        const div = document.createElement("div");
+        div.className = "preview";
+        div.innerHTML = `<img src="${url}" alt=""><span>${file.name}</span>`;
+        output.appendChild(div);
+      });
+    }
 
-      if (!files.length) {
-        output.innerHTML = "<p style='color:red'>Выберите хотя бы одно изображение!</p>";
+    // Обработка
+    document.getElementById("processBtn").onclick = async () => {
+      if (!selectedFiles.length) {
+        alert("Сначала выберите или перетащите изображения!");
         return;
       }
 
-      for (const file of files) {
+      const maxSize = parseInt(document.getElementById("maxSize").value);
+      const output = document.getElementById("output");
+      output.innerHTML = "";
+      processedFiles.length = 0;
+
+      const progressBar = document.getElementById("progressBar");
+      progressBar.style.display = "block";
+      progressBar.value = 0;
+
+      for (let i = 0; i < selectedFiles.length; i++) {
+        const file = selectedFiles[i];
         const img = new Image();
         img.src = URL.createObjectURL(file);
         await img.decode();
 
-        // Определяем размеры
         let [w, h] = [img.width, img.height];
         if (w > h && w > maxSize) {
           h *= maxSize / w;
@@ -98,14 +179,12 @@
           h = maxSize;
         }
 
-        // Canvas
         const canvas = document.createElement("canvas");
         canvas.width = w;
         canvas.height = h;
         const ctx = canvas.getContext("2d");
         ctx.drawImage(img, 0, 0, w, h);
 
-        // Сохраняем в WebP до 1 МБ
         let quality = 0.9;
         let blob;
         do {
@@ -113,29 +192,29 @@
           quality -= 0.05;
         } while (blob.size > 1024 * 1024 && quality > 0.1);
 
-        // Сохраняем для ZIP
         processedFiles.push({ name: file.name.replace(/\.[^/.]+$/, "") + ".webp", blob });
 
-        // Ссылка для скачивания
+        // превью с кнопкой скачать
         const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = processedFiles[processedFiles.length - 1].name;
-        link.textContent = `⬇ Скачать ${link.download} (${Math.round(blob.size/1024)} КБ)`;
-        output.appendChild(link);
+        const div = document.createElement("div");
+        div.className = "preview";
+        div.innerHTML = `<img src="${url}" alt=""><span>${processedFiles.at(-1).name}</span>
+          <a href="${url}" download="${processedFiles.at(-1).name}">⬇ Скачать</a>`;
+        output.appendChild(div);
+
+        progressBar.value = ((i + 1) / selectedFiles.length) * 100;
       }
 
-      // показываем кнопку "Скачать все"
+      progressBar.style.display = "none";
       if (processedFiles.length > 1) {
         document.getElementById("downloadAllBtn").style.display = "inline-block";
       }
     };
 
+    // Скачать все
     document.getElementById("downloadAllBtn").onclick = async () => {
       const zip = new JSZip();
-      processedFiles.forEach(file => {
-        zip.file(file.name, file.blob);
-      });
+      processedFiles.forEach(file => zip.file(file.name, file.blob));
       const content = await zip.generateAsync({ type: "blob" });
       saveAs(content, "images.zip");
     };
