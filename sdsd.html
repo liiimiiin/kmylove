@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Редактор изображений</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f3f4f6;
+      display: flex;
+      justify-content: center;
+      padding: 40px;
+    }
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 16px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+      width: 500px;
+      text-align: center;
+    }
+    h2 {
+      margin-bottom: 20px;
+      color: #333;
+    }
+    input[type="file"], input[type="number"], button {
+      margin: 10px 0;
+      padding: 10px;
+      font-size: 14px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+    }
+    button {
+      background: #4f46e5;
+      color: white;
+      border: none;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    button:hover {
+      background: #4338ca;
+    }
+    .output {
+      margin-top: 20px;
+      text-align: left;
+    }
+    a {
+      display: block;
+      margin: 5px 0;
+      color: #2563eb;
+      text-decoration: none;
+    }
+    a:hover {
+      text-decoration: underline;
+    }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+</head>
+<body>
+  <div class="container">
+    <h2>Редактор изображений</h2>
+    <input type="file" id="fileInput" multiple accept="image/*"><br>
+    <label>Максимальная длинная сторона (px):</label><br>
+    <input type="number" id="maxSize" value="1920"><br>
+    <button id="processBtn">Обработать</button>
+    <button id="downloadAllBtn" style="display:none; background:#10b981;">Скачать все (ZIP)</button>
+    <div id="output" class="output"></div>
+  </div>
+
+  <script>
+    const processedFiles = [];
+
+    document.getElementById("processBtn").onclick = async () => {
+      const files = document.getElementById("fileInput").files;
+      const maxSize = parseInt(document.getElementById("maxSize").value);
+      const output = document.getElementById("output");
+      output.innerHTML = "";
+      processedFiles.length = 0; // очищаем массив
+
+      if (!files.length) {
+        output.innerHTML = "<p style='color:red'>Выберите хотя бы одно изображение!</p>";
+        return;
+      }
+
+      for (const file of files) {
+        const img = new Image();
+        img.src = URL.createObjectURL(file);
+        await img.decode();
+
+        // Определяем размеры
+        let [w, h] = [img.width, img.height];
+        if (w > h && w > maxSize) {
+          h *= maxSize / w;
+          w = maxSize;
+        } else if (h > w && h > maxSize) {
+          w *= maxSize / h;
+          h = maxSize;
+        }
+
+        // Canvas
+        const canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, w, h);
+
+        // Сохраняем в WebP до 1 МБ
+        let quality = 0.9;
+        let blob;
+        do {
+          blob = await new Promise(resolve => canvas.toBlob(resolve, "image/webp", quality));
+          quality -= 0.05;
+        } while (blob.size > 1024 * 1024 && quality > 0.1);
+
+        // Сохраняем для ZIP
+        processedFiles.push({ name: file.name.replace(/\.[^/.]+$/, "") + ".webp", blob });
+
+        // Ссылка для скачивания
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = processedFiles[processedFiles.length - 1].name;
+        link.textContent = `⬇ Скачать ${link.download} (${Math.round(blob.size/1024)} КБ)`;
+        output.appendChild(link);
+      }
+
+      // показываем кнопку "Скачать все"
+      if (processedFiles.length > 1) {
+        document.getElementById("downloadAllBtn").style.display = "inline-block";
+      }
+    };
+
+    document.getElementById("downloadAllBtn").onclick = async () => {
+      const zip = new JSZip();
+      processedFiles.forEach(file => {
+        zip.file(file.name, file.blob);
+      });
+      const content = await zip.generateAsync({ type: "blob" });
+      saveAs(content, "images.zip");
+    };
+  </script>
+</body>
+</html>
