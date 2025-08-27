@@ -16,7 +16,7 @@
       padding: 30px;
       border-radius: 16px;
       box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-      width: 600px;
+      width: 650px;
       text-align: center;
     }
     h2 {
@@ -52,6 +52,10 @@
       background: #e0f2fe;
       border-color: #2563eb;
     }
+    .options {
+      text-align: left;
+      margin: 15px 0;
+    }
     .output {
       margin-top: 20px;
       text-align: left;
@@ -64,6 +68,7 @@
       background: #f9fafb;
       padding: 10px;
       border-radius: 8px;
+      position: relative;
     }
     .preview img {
       width: 80px;
@@ -99,6 +104,21 @@
     a:hover {
       text-decoration: underline;
     }
+    .tooltip {
+  position: absolute;
+  top: -25px; /* теперь сверху */
+  left: 90px;
+  font-size: 12px;
+  background: #111;
+  color: white;
+  padding: 3px 6px;
+  border-radius: 6px;
+      display: none;
+      white-space: nowrap;
+    }
+    .preview:hover .tooltip {
+      display: block;
+    }
   </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
@@ -110,8 +130,15 @@
     <div id="dropArea">Перетащите сюда фото или кликните, чтобы выбрать</div>
     <input type="file" id="fileInput" multiple accept="image/*" style="display:none">
     
-    <label>Максимальная длинная сторона (px):</label><br>
-    <input type="number" id="maxSize" value="1920"><br>
+    <div class="options">
+      <label><input type="checkbox" id="resizeCheck" checked> Изменить разрешение</label><br>
+      <div id="resizeOptions">
+        <label>Максимальная длинная сторона (px):</label>
+        <input type="number" id="maxSize" value="1920"><br>
+      </div>
+      <label><input type="checkbox" id="compressCheck" checked> Сжать до 1 МБ</label><br>
+      <label><input type="checkbox" id="convertCheck" checked> Конвертировать в WebP</label>
+    </div>
     
     <button id="processBtn">Обработать</button>
     <button id="downloadAllBtn" style="display:none; background:#10b981;">Скачать все (ZIP)</button>
@@ -127,6 +154,11 @@
 
     const dropArea = document.getElementById("dropArea");
     const fileInput = document.getElementById("fileInput");
+
+    // Показ/скрытие поля для разрешения
+    document.getElementById("resizeCheck").onchange = (e) => {
+      document.getElementById("resizeOptions").style.display = e.target.checked ? "block" : "none";
+    };
 
     // Клик по области = открыть файловый диалог
     dropArea.onclick = () => fileInput.click();
@@ -150,14 +182,30 @@
       showPreview();
     };
 
-    // Показываем превью с кнопкой удаления
+    // Показываем превью с инфо и кнопкой удаления
     function showPreview() {
       const output = document.getElementById("output");
       output.innerHTML = "";
       selectedFiles.forEach((file, index) => {
         const url = URL.createObjectURL(file);
+
         const div = document.createElement("div");
         div.className = "preview";
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          const img = new Image();
+          img.src = e.target.result;
+          img.onload = () => {
+            const sizeKB = (file.size / 1024).toFixed(1);
+            const tooltip = document.createElement("div");
+            tooltip.className = "tooltip";
+            tooltip.textContent = `${img.width}×${img.height}px — ${sizeKB} КБ`;
+            div.appendChild(tooltip);
+          };
+        };
+        reader.readAsDataURL(file);
+
         div.innerHTML = `
           <div style="display:flex; align-items:center;">
             <img src="${url}" alt="">
@@ -174,7 +222,7 @@
       selectedFiles.splice(index, 1);
       showPreview();
     }
-    window.removeFile = removeFile; // делаем глобальной
+    window.removeFile = removeFile;
 
     // Обработка
     document.getElementById("processBtn").onclick = async () => {
@@ -183,7 +231,11 @@
         return;
       }
 
+      const resizeEnabled = document.getElementById("resizeCheck").checked;
+      const compressEnabled = document.getElementById("compressCheck").checked;
+      const convertEnabled = document.getElementById("convertCheck").checked;
       const maxSize = parseInt(document.getElementById("maxSize").value);
+
       const output = document.getElementById("output");
       output.innerHTML = "";
       processedFiles.length = 0;
@@ -193,18 +245,20 @@
       progressBar.value = 0;
 
       for (let i = 0; i < selectedFiles.length; i++) {
-        const file = selectedFiles[i];
-        const img = new Image();
+        let file = selectedFiles[i];
+        let img = new Image();
         img.src = URL.createObjectURL(file);
         await img.decode();
 
         let [w, h] = [img.width, img.height];
-        if (w > h && w > maxSize) {
-          h *= maxSize / w;
-          w = maxSize;
-        } else if (h > w && h > maxSize) {
-          w *= maxSize / h;
-          h = maxSize;
+        if (resizeEnabled) {
+          if (w > h && w > maxSize) {
+            h *= maxSize / w;
+            w = maxSize;
+          } else if (h > w && h > maxSize) {
+            w *= maxSize / h;
+            h = maxSize;
+          }
         }
 
         const canvas = document.createElement("canvas");
@@ -213,16 +267,22 @@
         const ctx = canvas.getContext("2d");
         ctx.drawImage(img, 0, 0, w, h);
 
-        let quality = 0.9;
         let blob;
-        do {
-          blob = await new Promise(resolve => canvas.toBlob(resolve, "image/webp", quality));
-          quality -= 0.05;
-        } while (blob.size > 1024 * 1024 && quality > 0.1);
 
-        processedFiles.push({ name: file.name.replace(/\.[^/.]+$/, "") + ".webp", blob });
+        if (convertEnabled) {
+          // Конвертация в WebP
+          let quality = 0.9;
+          do {
+            blob = await new Promise(resolve => canvas.toBlob(resolve, "image/webp", quality));
+            quality -= 0.05;
+          } while (compressEnabled && blob.size > 1024 * 1024 && quality > 0.1);
+        } else {
+          // Оставляем оригинальный формат
+          blob = await new Promise(resolve => canvas.toBlob(resolve, file.type));
+        }
 
-        // превью после обработки
+        processedFiles.push({ name: convertEnabled ? file.name.replace(/\.[^/.]+$/, "") + ".webp" : file.name, blob });
+
         const url = URL.createObjectURL(blob);
         const div = document.createElement("div");
         div.className = "preview";
