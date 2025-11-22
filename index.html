@@ -1,375 +1,339 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <title>Редактор изображений</title>
+  <meta charset="utf-8" />
+  <title>Редактор изображений — расширенный с переименованием</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f3f4f6;
-      display: flex;
-      justify-content: center;
-      padding: 40px;
-    }
-    .container {
-      background: white;
-      padding: 30px;
-      border-radius: 16px;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-      width: 650px;
-      text-align: center;
-    }
-    h2 {
-      margin-bottom: 20px;
-      color: #333;
-    }
-    input[type="file"], input[type="number"], button {
-      margin: 10px 0;
-      padding: 10px;
-      font-size: 14px;
-      border-radius: 8px;
-      border: 1px solid #ccc;
-    }
-    button {
-      background: #4f46e5;
-      color: white;
-      border: none;
-      cursor: pointer;
-      transition: 0.2s;
-    }
-    button:hover {
-      background: #4338ca;
-    }
-    #dropArea {
-      border: 2px dashed #888;
-      border-radius: 12px;
-      padding: 30px;
-      margin: 20px 0;
-      background: #fafafa;
-      cursor: pointer;
-    }
-    #dropArea.dragover {
-      background: #e0f2fe;
-      border-color: #2563eb;
-    }
-    .options {
-      text-align: left;
-      margin: 15px 0;
-    }
-    .output {
-      margin-top: 20px;
-      text-align: left;
-    }
-    .preview {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin: 10px 0;
-      background: #f9fafb;
-      padding: 10px;
-      border-radius: 8px;
-      position: relative;
-    }
-    .preview img {
-      width: 80px;
-      height: auto;
-      border-radius: 6px;
-      margin-right: 10px;
-    }
-    .file-info {
-      flex-grow: 1;
-    }
-    .remove-btn {
-      background: #ef4444;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      padding: 5px 10px;
-      cursor: pointer;
-    }
-    .remove-btn:hover {
-      background: #dc2626;
-    }
-    progress {
-      width: 100%;
-      margin-top: 15px;
-      height: 18px;
-    }
-    a {
-      display: inline-block;
-      margin-left: 10px;
-      color: #2563eb;
-      text-decoration: none;
-    }
-    a:hover {
-      text-decoration: underline;
-    }
-    .tooltip {
-      position: absolute;
-      top: -25px;
-      left: 90px;
-      font-size: 12px;
-      background: #111;
-      color: white;
-      padding: 3px 6px;
-      border-radius: 6px;
-      display: none;
-      white-space: nowrap;
-      z-index: 10;
-    }
-    .preview:hover .tooltip {
-      display: block;
-    }
-    /* --- Форматы карточками --- */
-    .format-options {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-      gap: 10px;
-      margin: 15px 0;
-    }
-    .format-card {
-      display: flex;
-      align-items: flex-start;
-      gap: 8px;
-      background: #f9fafb;
-      border: 2px solid #ddd;
-      border-radius: 10px;
-      padding: 10px;
-      cursor: pointer;
-      transition: all 0.2s ease;
-    }
-    .format-card:hover {
-      border-color: #6366f1;
-      background: #eef2ff;
-    }
-    .format-card input[type="radio"] {
-      margin-top: 4px;
-    }
-    .format-card input[type="radio"]:checked + div {
-      font-weight: bold;
-      color: #4338ca;
-    }
-    .format-card small {
-      color: #666;
-    }
+    body{font-family:Arial,Helvetica,sans-serif;background:#f3f4f6;display:flex;justify-content:center;padding:40px}
+    .container{background:#fff;padding:30px;border-radius:16px;box-shadow:0 4px 15px rgba(0,0,0,.1);width:750px}
+    h2{margin:0 0 16px;color:#333}
+    #dropArea{border:2px dashed #888;border-radius:12px;padding:26px;margin:10px 0;background:#fafafa;cursor:pointer;text-align:center}
+    .options{margin:12px 0;text-align:left}
+    input,button{padding:8px;border-radius:8px;border:1px solid #ccc;font-size:14px}
+    button{background:#4f46e5;color:#fff;border:none;cursor:pointer}
+    .format-options{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-top:10px}
+    .format-card{display:flex;align-items:flex-start;gap:8px;background:#f9fafb;border:2px solid #ddd;padding:10px;border-radius:10px;cursor:pointer}
+    .format-card:hover{border-color:#6366f1;background:#eef2ff}
+    .preview{display:flex;align-items:center;justify-content:space-between;margin:10px 0;background:#f9fafb;padding:10px;border-radius:8px;position:relative}
+    .preview img{width:80px;border-radius:6px;margin-right:10px}
+    .tooltip{position:absolute;top:-28px;left:90px;font-size:12px;background:#111;color:white;padding:4px 7px;border-radius:6px;display:none;white-space:nowrap;z-index:20}
+    .preview:hover .tooltip{display:block}
+    .remove-btn{background:#ef4444;color:#fff;border:none;padding:6px 8px;border-radius:6px;cursor:pointer}
+    .rename-panel{margin-top:10px;background:#f1f5f9;padding:12px;border-radius:12px;display:none}
+    .note{font-size:13px;color:#444;margin-top:8px}
   </style>
+
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 </head>
+
 <body>
-  <div class="container">
-    <h2>Редактор изображений</h2>
-    
-    <div id="dropArea">Перетащите сюда фото или кликните, чтобы выбрать</div>
-    <input type="file" id="fileInput" multiple accept="image/*" style="display:none">
-    
-    <div class="options">
-      <label><input type="checkbox" id="resizeCheck" checked> Изменить разрешение</label><br>
-      <div id="resizeOptions">
-        <label>Максимальная длинная сторона (px):</label>
-        <input type="number" id="maxSize" value="1920"><br>
-      </div>
-      <label><input type="checkbox" id="compressCheck" checked> Сжать до 1 МБ</label><br>
-      
-      <p><b>Выберите формат конвертации:</b></p>
-      <div class="format-options">
-        <label class="format-card">
-          <input type="radio" name="format" value="original">
-          <div>
-            <b>Оригинал</b><br>
-            <small>Сохраняем исходный формат</small>
-          </div>
-        </label>
-        <label class="format-card">
-          <input type="radio" name="format" value="image/jpeg">
-          <div>
-            <b>JPEG</b><br>
-            <small>Оптимально для фото</small>
-          </div>
-        </label>
-        <label class="format-card">
-          <input type="radio" name="format" value="image/png">
-          <div>
-            <b>PNG</b><br>
-            <small>Поддержка прозрачности</small>
-          </div>
-        </label>
-        <label class="format-card">
-          <input type="radio" name="format" value="image/webp" checked>
-          <div>
-            <b>WebP</b><br>
-            <small>Современный формат, меньше вес</small>
-          </div>
-        </label>
-      </div>
-    </div>
-    
-    <button id="processBtn">Обработать</button>
-    <button id="downloadAllBtn" style="display:none; background:#10b981;">Скачать все (ZIP)</button>
-    
-    <progress id="progressBar" value="0" max="100" style="display:none;"></progress>
-    
-    <div id="output" class="output"></div>
+<div class="container">
+  <h2>Редактор изображений</h2>
+
+  <div id="dropArea">Перетащите сюда фото или нажмите</div>
+  <input id="fileInput" type="file" accept="image/*" multiple style="display:none">
+
+  <!-- Новая функция ПЕРЕИМЕНОВАНИЯ -->
+  <button id="renameToggleBtn" style="margin-top:10px;background:#0ea5e9">Переименовать файлы</button>
+
+  <div class="rename-panel" id="renamePanel">
+    <label><b>Новое базовое имя файлов:</b></label><br>
+    <input id="renameInput" type="text" placeholder="Например: travel" style="margin-top:5px;width:70%">
+    <p style="font-size:13px;color:#555;margin-top:5px">
+      Формат имён: <i>имя_1.jpg</i>, <i>имя_2.webp</i>, ...
+    </p>
   </div>
 
-  <script>
-    const processedFiles = [];
-    let selectedFiles = [];
+  <div class="options">
+    <label><input id="resizeCheck" type="checkbox" checked> Изменить разрешение</label><br>
+    <div id="resizeOptions" style="margin:8px 0 6px 18px">
+      <label>Макс. длинная сторона (px):</label>
+      <input id="maxSize" type="number" value="1920" style="width:110px;margin-left:8px">
+    </div>
 
-    const dropArea = document.getElementById("dropArea");
-    const fileInput = document.getElementById("fileInput");
+    <label><input id="compressCheck" type="checkbox" checked> Сжать до 1 МБ</label><br>
 
-    document.getElementById("resizeCheck").onchange = (e) => {
-      document.getElementById("resizeOptions").style.display = e.target.checked ? "block" : "none";
-    };
+    <label style="display:block;margin-top:6px">
+      <input id="pngToWebpFallback" type="checkbox">
+      Если PNG слишком большой — конвертировать в WebP
+    </label>
 
-    dropArea.onclick = () => fileInput.click();
-    dropArea.addEventListener("dragover", e => { e.preventDefault(); dropArea.classList.add("dragover"); });
-    dropArea.addEventListener("dragleave", () => dropArea.classList.remove("dragover"));
-    dropArea.addEventListener("drop", e => {
-      e.preventDefault();
-      dropArea.classList.remove("dragover");
-      selectedFiles = [...selectedFiles, ...e.dataTransfer.files];
-      showPreview();
-    });
-    fileInput.onchange = () => {
-      selectedFiles = [...selectedFiles, ...fileInput.files];
-      showPreview();
-    };
+    <p style="margin-top:10px"><b>Формат конвертации:</b></p>
 
-    function showPreview() {
-      const output = document.getElementById("output");
-      output.innerHTML = "";
-      selectedFiles.forEach((file, index) => {
-        const url = URL.createObjectURL(file);
-        const div = document.createElement("div");
-        div.className = "preview";
+    <div class="format-options">
+      <label class="format-card"><input type="radio" name="format" value="original"><div><b>Оригинал</b><br><small>Как есть</small></div></label>
+      <label class="format-card"><input type="radio" name="format" value="image/jpeg"><div><b>JPEG</b><br><small>Фото</small></div></label>
+      <label class="format-card"><input type="radio" name="format" value="image/png"><div><b>PNG</b><br><small>Без потерь</small></div></label>
+      <label class="format-card"><input type="radio" name="format" value="image/webp" checked><div><b>WebP</b><br><small>Малый размер</small></div></label>
+    </div>
+  </div>
 
-        const reader = new FileReader();
-        reader.onload = function(e) {
-          const img = new Image();
-          img.src = e.target.result;
-          img.onload = () => {
-            const sizeKB = (file.size / 1024).toFixed(1);
-            const tooltip = document.createElement("div");
-            tooltip.className = "tooltip";
-            tooltip.textContent = `${img.width}×${img.height}px — ${sizeKB} КБ — ${file.type}`;
-            div.appendChild(tooltip);
-          };
-        };
-        reader.readAsDataURL(file);
+  <button id="processBtn">Обработать</button>
+  <button id="downloadAllBtn" style="display:none;background:#10b981;margin-left:8px">Скачать ZIP</button>
 
-        div.innerHTML = `
-          <div style="display:flex; align-items:center;">
-            <img src="${url}" alt="">
-            <span class="file-info">${file.name}</span>
-          </div>
-          <button class="remove-btn" onclick="removeFile(${index})">❌ Удалить</button>
-        `;
-        output.appendChild(div);
-      });
-    }
+  <progress id="progressBar" value="0" max="100" style="display:none;width:100%;margin-top:12px;height:16px"></progress>
 
-    function removeFile(index) {
-      selectedFiles.splice(index, 1);
-      showPreview();
-    }
-    window.removeFile = removeFile;
+  <div id="output" style="margin-top:12px"></div>
+</div>
 
-    document.getElementById("processBtn").onclick = async () => {
-      if (!selectedFiles.length) {
-        alert("Сначала выберите или перетащите изображения!");
-        return;
-      }
+<script>
+/* ------------------------ GLOBALS --------------------------- */
 
-      const resizeEnabled = document.getElementById("resizeCheck").checked;
-      const compressEnabled = document.getElementById("compressCheck").checked;
-      const formatSelect = document.querySelector('input[name="format"]:checked').value;
-      const maxSize = parseInt(document.getElementById("maxSize").value);
+let selectedFiles = [];
+let processedFiles = [];
+let renameEnabled = false;
 
-      const output = document.getElementById("output");
-      output.innerHTML = "";
-      processedFiles.length = 0;
+const LIMIT = 1024 * 1024;
 
-      const progressBar = document.getElementById("progressBar");
-      progressBar.style.display = "block";
-      progressBar.value = 0;
+/* ------------------------ UI ELEMENTS ------------------------ */
 
-      for (let i = 0; i < selectedFiles.length; i++) {
-        let file = selectedFiles[i];
-        let img = new Image();
-        img.src = URL.createObjectURL(file);
-        await img.decode();
+const dropArea = document.getElementById('dropArea');
+const fileInput = document.getElementById('fileInput');
+const output = document.getElementById('output');
+const renamePanel = document.getElementById('renamePanel');
+const renameToggleBtn = document.getElementById('renameToggleBtn');
 
-        let [w, h] = [img.width, img.height];
-        if (resizeEnabled) {
-          if (w > h && w > maxSize) { h *= maxSize / w; w = maxSize; }
-          else if (h > w && h > maxSize) { w *= maxSize / h; h = maxSize; }
-        }
+/* ------------------------ RENAME TOGGLE ---------------------- */
 
-        const canvas = document.createElement("canvas");
-        canvas.width = w;
-        canvas.height = h;
-        const ctx = canvas.getContext("2d");
-        ctx.drawImage(img, 0, 0, w, h);
+renameToggleBtn.onclick = () => {
+  renameEnabled = !renameEnabled;
+  renamePanel.style.display = renameEnabled ? 'block' : 'none';
+  renameToggleBtn.style.background = renameEnabled ? "#0284c7" : "#0ea5e9";
+};
 
-        let blob;
-        let targetFormat = formatSelect;
-        if (formatSelect === "original") {
-          targetFormat = file.type;
-        }
+/* ------------------------ ADD FILES -------------------------- */
 
-        let quality = 0.9;
-        do {
-          blob = await new Promise(resolve => canvas.toBlob(resolve, targetFormat, quality));
-          quality -= 0.05;
-        } while (compressEnabled && blob && blob.size > 1024 * 1024 && quality > 0.1);
+dropArea.onclick = () => fileInput.click();
 
-        if (!blob) continue;
+dropArea.addEventListener('dragover', e => {
+  e.preventDefault();
+  dropArea.classList.add('dragover');
+});
+dropArea.addEventListener('dragleave', () => dropArea.classList.remove('dragover'));
+dropArea.addEventListener('drop', e => {
+  e.preventDefault();
+  dropArea.classList.remove('dragover');
+  selectedFiles = [...selectedFiles, ...e.dataTransfer.files];
+  applyRenameIfNeeded();
+  showPreview();
+});
 
-        let ext = targetFormat.split("/")[1];
-        processedFiles.push({ name: file.name.replace(/\.[^/.]+$/, "") + "." + ext, blob });
+fileInput.onchange = () => {
+  selectedFiles = [...selectedFiles, ...fileInput.files];
+  applyRenameIfNeeded();
+  showPreview();
+};
 
-        const url = URL.createObjectURL(blob);
-        const div = document.createElement("div");
-        div.className = "preview";
+/* ------------------------ MASS RENAME ------------------------ */
 
-        // создаём превью с tooltip для обработанного файла
-        const newImg = new Image();
-        newImg.src = url;
-        await newImg.decode();
-        const sizeKB = (blob.size / 1024).toFixed(1);
+function applyRenameIfNeeded() {
+  if (!renameEnabled) return;
+  const base = document.getElementById('renameInput').value.trim();
+  if (!base) return;
 
+  selectedFiles = selectedFiles.map((file, index) => {
+    const ext = file.name.split('.').pop();
+    const newName = `${base}_${index+1}.${ext}`;
+
+    return new File([file], newName, { type: file.type });
+  });
+}
+
+/* ------------------------ PREVIEW ---------------------------- */
+
+function showPreview() {
+  output.innerHTML = "";
+  selectedFiles.forEach((file, index) => {
+    const url = URL.createObjectURL(file);
+    const div = document.createElement("div");
+    div.className = "preview";
+
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = new Image();
+      img.src = e.target.result;
+      img.onload = () => {
         const tooltip = document.createElement("div");
         tooltip.className = "tooltip";
-        tooltip.textContent = `${newImg.width}×${newImg.height}px — ${sizeKB} КБ — ${targetFormat}`;
+        tooltip.textContent =
+          `${img.width}×${img.height}px — ${(file.size/1024).toFixed(1)} КБ — ${file.type}`;
         div.appendChild(tooltip);
-
-        div.innerHTML += `
-          <div style="display:flex; align-items:center;">
-            <img src="${url}" alt="">
-            <span class="file-info">${processedFiles.at(-1).name}</span>
-          </div>
-          <a href="${url}" download="${processedFiles.at(-1).name}">⬇ Скачать</a>
-        `;
-        output.appendChild(div);
-
-        progressBar.value = ((i + 1) / selectedFiles.length) * 100;
-      }
-
-      progressBar.style.display = "none";
-      if (processedFiles.length > 1) {
-        document.getElementById("downloadAllBtn").style.display = "inline-block";
-      }
+      };
     };
+    reader.readAsDataURL(file);
 
-    document.getElementById("downloadAllBtn").onclick = async () => {
-      const zip = new JSZip();
-      processedFiles.forEach(file => zip.file(file.name, file.blob));
-      const content = await zip.generateAsync({ type: "blob" });
-      saveAs(content, "images.zip");
-    };
-  </script>
+    div.innerHTML = `
+      <div style="display:flex;align-items:center">
+        <img src="${url}">
+        <span>${file.name}</span>
+      </div>
+      <button class="remove-btn" onclick="removeFile(${index})">Удалить</button>
+    `;
+
+    output.appendChild(div);
+  });
+}
+
+function removeFile(i){
+  selectedFiles.splice(i,1);
+  applyRenameIfNeeded();
+  showPreview();
+}
+window.removeFile = removeFile;
+
+/* ------------------------ IMAGE PROCESSING ------------------- */
+
+function blobFromCanvas(canvas, mime, q){
+  return new Promise(res => canvas.toBlob(res, mime, q));
+}
+
+document.getElementById('processBtn').onclick = async () => {
+
+  if (!selectedFiles.length) return alert("Добавьте файлы!");
+
+  const resizeEnabled = document.getElementById("resizeCheck").checked;
+  const compressEnabled = document.getElementById("compressCheck").checked;
+  const pngToWebpFallback = document.getElementById("pngToWebpFallback").checked;
+  const targetRad = document.querySelector('input[name="format"]:checked').value;
+  const maxSide = parseInt(document.getElementById("maxSize").value) || 1920;
+
+  output.innerHTML = "";
+  processedFiles = [];
+
+  const progressBar = document.getElementById('progressBar');
+  progressBar.style.display = "block";
+  progressBar.value = 0;
+
+  for (let i = 0; i < selectedFiles.length; i++) {
+    const file = selectedFiles[i];
+    const img = new Image();
+    img.src = URL.createObjectURL(file);
+    await img.decode();
+
+    let w = img.width, h = img.height;
+
+    if (resizeEnabled) {
+      if (w > h && w > maxSide) {
+        h = Math.round(h * (maxSide / w));
+        w = maxSide;
+      } else if (h > w && h > maxSide) {
+        w = Math.round(w * (maxSide / h));
+        h = maxSide;
+      }
+    }
+
+    let canvas = document.createElement('canvas');
+    let ctx = canvas.getContext('2d');
+    canvas.width = w;
+    canvas.height = h;
+    ctx.drawImage(img, 0, 0, w, h);
+
+    let target = targetRad === "original" ? file.type : targetRad;
+    let blob;
+
+    /* JPEG / WebP = регулируем quality */
+    if (target === "image/jpeg" || target === "image/webp") {
+      let q = 0.9;
+      do {
+        blob = await blobFromCanvas(canvas, target, q);
+        q -= 0.05;
+      } while (compressEnabled && blob.size > LIMIT && q > 0.1);
+    }
+
+    /* PNG — quality игнорируется → уменьшаем разрешение */
+    else if (target === "image/png") {
+      blob = await blobFromCanvas(canvas, "image/png");
+      if (compressEnabled && blob.size > LIMIT) {
+        let cw = w, ch = h;
+        const min = 200;
+        while (blob.size > LIMIT && cw > min && ch > min) {
+          cw = Math.round(cw * 0.9);
+          ch = Math.round(ch * 0.9);
+
+          let tmp = document.createElement("canvas");
+          tmp.width = cw;
+          tmp.height = ch;
+          tmp.getContext("2d").drawImage(img, 0, 0, cw, ch);
+
+          blob = await blobFromCanvas(tmp, "image/png");
+          canvas = tmp;
+        }
+      }
+      if (compressEnabled && blob.size > LIMIT && pngToWebpFallback) {
+        target = "image/webp";
+        let q = 0.9;
+        let tmp;
+        do {
+          tmp = await blobFromCanvas(canvas, "image/webp", q);
+          q -= 0.05;
+        } while (tmp.size > LIMIT && q > 0.1);
+        blob = tmp;
+      }
+    }
+
+    else {
+      blob = await blobFromCanvas(canvas, target);
+    }
+
+    /* ----------------------- MASS RENAME OUTPUT ---------------------- */
+
+    const base = renameEnabled ? document.getElementById("renameInput").value.trim() : null;
+    let outName;
+
+    if (renameEnabled && base) {
+      const ext = target.split("/")[1];
+      outName = `${base}_${i+1}.${ext}`;
+    } else {
+      const ext = target.split("/")[1];
+      outName = file.name.replace(/\.[^.]+$/, "") + "." + ext;
+    }
+
+    processedFiles.push({ name: outName, blob });
+
+    /* Preview processed image */
+    const url = URL.createObjectURL(blob);
+    const div = document.createElement('div');
+    div.className = 'preview';
+
+    const newImg = new Image();
+    newImg.src = url;
+    await newImg.decode();
+
+    const tooltip = document.createElement('div');
+    tooltip.className = 'tooltip';
+    tooltip.textContent =
+      `${newImg.width}×${newImg.height}px — ${(blob.size/1024).toFixed(1)} КБ — ${target}`;
+    div.appendChild(tooltip);
+
+    div.innerHTML += `
+      <div style="display:flex;align-items:center">
+        <img src="${url}">
+        <span>${outName}</span>
+      </div>
+      <a href="${url}" download="${outName}">Скачать</a>
+    `;
+    output.appendChild(div);
+
+    progressBar.value = Math.round(((i+1)/selectedFiles.length) * 100);
+  }
+
+  progressBar.style.display = "none";
+
+  if (processedFiles.length > 1)
+    document.getElementById('downloadAllBtn').style.display = "inline-block";
+};
+
+/* ------------------------ ZIP DOWNLOAD ------------------------ */
+
+document.getElementById("downloadAllBtn").onclick = async () => {
+  const zip = new JSZip();
+  processedFiles.forEach(f => zip.file(f.name, f.blob));
+  const content = await zip.generateAsync({type:'blob'});
+  saveAs(content, "images.zip");
+};
+
+</script>
+
 </body>
 </html>
-
