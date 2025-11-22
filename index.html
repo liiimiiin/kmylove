@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
   <meta charset="utf-8" />
-  <title>Редактор изображений — расширенный с переименованием</title>
+  <title>Редактор изображений — расширенный</title>
   <style>
     body{font-family:Arial,Helvetica,sans-serif;background:#f3f4f6;display:flex;justify-content:center;padding:40px}
     .container{background:#fff;padding:30px;border-radius:16px;box-shadow:0 4px 15px rgba(0,0,0,.1);width:750px}
@@ -20,7 +20,6 @@
     .preview:hover .tooltip{display:block}
     .remove-btn{background:#ef4444;color:#fff;border:none;padding:6px 8px;border-radius:6px;cursor:pointer}
     .rename-panel{margin-top:10px;background:#f1f5f9;padding:12px;border-radius:12px;display:none}
-    .note{font-size:13px;color:#444;margin-top:8px}
   </style>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
@@ -31,21 +30,24 @@
 <div class="container">
   <h2>Редактор изображений</h2>
 
-  <div id="dropArea">Перетащите сюда фото или нажмите</div>
+  <div id="dropArea">Перетащите фото или нажмите</div>
   <input id="fileInput" type="file" accept="image/*" multiple style="display:none">
 
-  <!-- Новая функция ПЕРЕИМЕНОВАНИЯ -->
-  <button id="renameToggleBtn" style="margin-top:10px;background:#0ea5e9">Переименовать файлы</button>
+  <!-- Переименование -->
+  <button id="renameToggleBtn" style="margin-top:10px;background:#0ea5e9">
+    Переименовать файлы
+  </button>
 
   <div class="rename-panel" id="renamePanel">
-    <label><b>Новое базовое имя файлов:</b></label><br>
-    <input id="renameInput" type="text" placeholder="Например: travel" style="margin-top:5px;width:70%">
+    <label><b>Новое базовое имя:</b></label><br>
+    <input id="renameInput" type="text" placeholder="например: отпуск" style="margin-top:5px;width:70%">
     <p style="font-size:13px;color:#555;margin-top:5px">
-      Формат имён: <i>имя_1.jpg</i>, <i>имя_2.webp</i>, ...
+      Итог: <i>imya-1.jpg</i>, <i>imya-2.webp</i>, ...
     </p>
   </div>
 
   <div class="options">
+
     <label><input id="resizeCheck" type="checkbox" checked> Изменить разрешение</label><br>
     <div id="resizeOptions" style="margin:8px 0 6px 18px">
       <label>Макс. длинная сторона (px):</label>
@@ -56,17 +58,18 @@
 
     <label style="display:block;margin-top:6px">
       <input id="pngToWebpFallback" type="checkbox">
-      Если PNG слишком большой — конвертировать в WebP
+      Если PNG слишком большой — в WebP
     </label>
 
     <p style="margin-top:10px"><b>Формат конвертации:</b></p>
 
     <div class="format-options">
-      <label class="format-card"><input type="radio" name="format" value="original"><div><b>Оригинал</b><br><small>Как есть</small></div></label>
-      <label class="format-card"><input type="radio" name="format" value="image/jpeg"><div><b>JPEG</b><br><small>Фото</small></div></label>
-      <label class="format-card"><input type="radio" name="format" value="image/png"><div><b>PNG</b><br><small>Без потерь</small></div></label>
-      <label class="format-card"><input type="radio" name="format" value="image/webp" checked><div><b>WebP</b><br><small>Малый размер</small></div></label>
+      <label class="format-card"><input type="radio" name="format" value="original"><div><b>Оригинал</b><br><small>как есть</small></div></label>
+      <label class="format-card"><input type="radio" name="format" value="image/jpeg"><div><b>JPEG</b><br><small>фото</small></div></label>
+      <label class="format-card"><input type="radio" name="format" value="image/png"><div><b>PNG</b><br><small>без потерь</small></div></label>
+      <label class="format-card"><input type="radio" name="format" value="image/webp" checked><div><b>WebP</b><br><small>минимум веса</small></div></label>
     </div>
+
   </div>
 
   <button id="processBtn">Обработать</button>
@@ -78,7 +81,33 @@
 </div>
 
 <script>
-/* ------------------------ GLOBALS --------------------------- */
+
+/* ------------------------ TRANSLITERATION ---------------------- */
+
+function transliterate(str) {
+  const map = {
+    'а':'a','б':'b','в':'v','г':'g','д':'d','е':'e','ё':'yo','ж':'zh','з':'z','и':'i',
+    'й':'y','к':'k','л':'l','м':'m','н':'n','о':'o','п':'p','р':'r','с':'s','т':'t',
+    'у':'u','ф':'f','х':'h','ц':'c','ч':'ch','ш':'sh','щ':'sch','ъ':'','ы':'y',
+    'ь':'','э':'e','ю':'yu','я':'ya',
+    'А':'A','Б':'B','В':'V','Г':'G','Д':'D','Е':'E','Ё':'Yo','Ж':'Zh','З':'Z','И':'I',
+    'Й':'Y','К':'K','Л':'L','М':'M','Н':'N','О':'O','П':'P','Р':'R','С':'S','Т':'T',
+    'У':'U','Ф':'F','Х':'H','Ц':'C','Ч':'Ch','Ш':'Sh','Щ':'Sch','Ъ':'','Ы':'Y',
+    'Ь':'','Э':'E','Ю':'Yu','Я':'Ya'
+  };
+
+  return str
+    .split('')
+    .map(ch => map[ch] ?? ch)
+    .join('')
+    .replace(/\s+/g, '-')     // пробелы → "-"
+    .replace(/_+/g, '-')      // "_" → "-"
+    .replace(/[^a-zA-Z0-9\-]/g, '') // удалить всё лишнее
+    .replace(/-+/g, '-')      // "--" → "-"
+    .replace(/^-|-$/g, '');   // убрать "-"" по краям
+}
+
+/* ------------------------ GLOBALS ------------------------------ */
 
 let selectedFiles = [];
 let processedFiles = [];
@@ -86,30 +115,30 @@ let renameEnabled = false;
 
 const LIMIT = 1024 * 1024;
 
-/* ------------------------ UI ELEMENTS ------------------------ */
-
 const dropArea = document.getElementById('dropArea');
 const fileInput = document.getElementById('fileInput');
 const output = document.getElementById('output');
-const renamePanel = document.getElementById('renamePanel');
 const renameToggleBtn = document.getElementById('renameToggleBtn');
+const renamePanel = document.getElementById('renamePanel');
 
-/* ------------------------ RENAME TOGGLE ---------------------- */
+/* ------------------------ RENAME TOGGLE ------------------------ */
 
 renameToggleBtn.onclick = () => {
   renameEnabled = !renameEnabled;
   renamePanel.style.display = renameEnabled ? 'block' : 'none';
   renameToggleBtn.style.background = renameEnabled ? "#0284c7" : "#0ea5e9";
+
+  if (renameEnabled) {
+    applyRenameIfNeeded();
+    showPreview();
+  }
 };
 
-/* ------------------------ ADD FILES -------------------------- */
+/* ------------------------ FILE ADD ----------------------------- */
 
 dropArea.onclick = () => fileInput.click();
 
-dropArea.addEventListener('dragover', e => {
-  e.preventDefault();
-  dropArea.classList.add('dragover');
-});
+dropArea.addEventListener('dragover', e => { e.preventDefault(); dropArea.classList.add('dragover'); });
 dropArea.addEventListener('dragleave', () => dropArea.classList.remove('dragover'));
 dropArea.addEventListener('drop', e => {
   e.preventDefault();
@@ -125,25 +154,28 @@ fileInput.onchange = () => {
   showPreview();
 };
 
-/* ------------------------ MASS RENAME ------------------------ */
+/* ------------------------ MASS RENAME --------------------------- */
 
 function applyRenameIfNeeded() {
   if (!renameEnabled) return;
-  const base = document.getElementById('renameInput').value.trim();
+
+  let base = document.getElementById("renameInput").value.trim();
   if (!base) return;
+
+  base = transliterate(base);
 
   selectedFiles = selectedFiles.map((file, index) => {
     const ext = file.name.split('.').pop();
-    const newName = `${base}_${index+1}.${ext}`;
-
+    const newName = `${base}-${index+1}.${ext}`;
     return new File([file], newName, { type: file.type });
   });
 }
 
-/* ------------------------ PREVIEW ---------------------------- */
+/* ------------------------ PREVIEW ------------------------------- */
 
 function showPreview() {
   output.innerHTML = "";
+
   selectedFiles.forEach((file, index) => {
     const url = URL.createObjectURL(file);
     const div = document.createElement("div");
@@ -163,7 +195,7 @@ function showPreview() {
     };
     reader.readAsDataURL(file);
 
-    div.innerHTML = `
+    div.innerHTML += `
       <div style="display:flex;align-items:center">
         <img src="${url}">
         <span>${file.name}</span>
@@ -182,11 +214,13 @@ function removeFile(i){
 }
 window.removeFile = removeFile;
 
-/* ------------------------ IMAGE PROCESSING ------------------- */
+/* ------------------------ CANVAS TO BLOB ------------------------ */
 
 function blobFromCanvas(canvas, mime, q){
   return new Promise(res => canvas.toBlob(res, mime, q));
 }
+
+/* ------------------------ PROCESSING ---------------------------- */
 
 document.getElementById('processBtn').onclick = async () => {
 
@@ -206,6 +240,7 @@ document.getElementById('processBtn').onclick = async () => {
   progressBar.value = 0;
 
   for (let i = 0; i < selectedFiles.length; i++) {
+
     const file = selectedFiles[i];
     const img = new Image();
     img.src = URL.createObjectURL(file);
@@ -215,24 +250,20 @@ document.getElementById('processBtn').onclick = async () => {
 
     if (resizeEnabled) {
       if (w > h && w > maxSide) {
-        h = Math.round(h * (maxSide / w));
-        w = maxSide;
+        h = Math.round(h * (maxSide / w)); w = maxSide;
       } else if (h > w && h > maxSide) {
-        w = Math.round(w * (maxSide / h));
-        h = maxSide;
+        w = Math.round(w * (maxSide / h)); h = maxSide;
       }
     }
 
     let canvas = document.createElement('canvas');
     let ctx = canvas.getContext('2d');
-    canvas.width = w;
-    canvas.height = h;
+    canvas.width = w; canvas.height = h;
     ctx.drawImage(img, 0, 0, w, h);
 
-    let target = targetRad === "original" ? file.type : targetRad;
+    let target = (targetRad === "original") ? file.type : targetRad;
     let blob;
 
-    /* JPEG / WebP = регулируем quality */
     if (target === "image/jpeg" || target === "image/webp") {
       let q = 0.9;
       do {
@@ -241,7 +272,6 @@ document.getElementById('processBtn').onclick = async () => {
       } while (compressEnabled && blob.size > LIMIT && q > 0.1);
     }
 
-    /* PNG — quality игнорируется → уменьшаем разрешение */
     else if (target === "image/png") {
       blob = await blobFromCanvas(canvas, "image/png");
       if (compressEnabled && blob.size > LIMIT) {
@@ -250,12 +280,9 @@ document.getElementById('processBtn').onclick = async () => {
         while (blob.size > LIMIT && cw > min && ch > min) {
           cw = Math.round(cw * 0.9);
           ch = Math.round(ch * 0.9);
-
           let tmp = document.createElement("canvas");
-          tmp.width = cw;
-          tmp.height = ch;
+          tmp.width = cw; tmp.height = ch;
           tmp.getContext("2d").drawImage(img, 0, 0, cw, ch);
-
           blob = await blobFromCanvas(tmp, "image/png");
           canvas = tmp;
         }
@@ -276,14 +303,15 @@ document.getElementById('processBtn').onclick = async () => {
       blob = await blobFromCanvas(canvas, target);
     }
 
-    /* ----------------------- MASS RENAME OUTPUT ---------------------- */
+    /* ------------------------- FINAL NAME ------------------------- */
 
-    const base = renameEnabled ? document.getElementById("renameInput").value.trim() : null;
+    let base = renameEnabled ? document.getElementById("renameInput").value.trim() : null;
     let outName;
 
     if (renameEnabled && base) {
+      base = transliterate(base);
       const ext = target.split("/")[1];
-      outName = `${base}_${i+1}.${ext}`;
+      outName = `${base}-${i+1}.${ext}`;
     } else {
       const ext = target.split("/")[1];
       outName = file.name.replace(/\.[^.]+$/, "") + "." + ext;
@@ -291,7 +319,7 @@ document.getElementById('processBtn').onclick = async () => {
 
     processedFiles.push({ name: outName, blob });
 
-    /* Preview processed image */
+    /* Preview processed */
     const url = URL.createObjectURL(blob);
     const div = document.createElement('div');
     div.className = 'preview';
@@ -324,7 +352,7 @@ document.getElementById('processBtn').onclick = async () => {
     document.getElementById('downloadAllBtn').style.display = "inline-block";
 };
 
-/* ------------------------ ZIP DOWNLOAD ------------------------ */
+/* ------------------------ ZIP DOWNLOAD -------------------------- */
 
 document.getElementById("downloadAllBtn").onclick = async () => {
   const zip = new JSZip();
